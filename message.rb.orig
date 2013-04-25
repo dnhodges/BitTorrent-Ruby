@@ -5,7 +5,12 @@ class Integer
 end
 
 class String
+<<<<<<< HEAD
+
+    def from_be #"packedint" --> [int] --> [int][0] = int
+=======
     def from_be # "packedint" --> [int] --> [int][0] = int
+>>>>>>> upstream/master
         self.unpack('N')[0]
     end
 

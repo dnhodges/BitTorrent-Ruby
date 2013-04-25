@@ -1,20 +1,6 @@
 class Integer
-    def to_be # int --> [int] --> "packedint"
+    def to_be
         [self].pack('N')
-    end
-end
-
-class String
-    def from_be # "packedint" --> [int] --> [int][0] = int
-        self.unpack('N')[0]
-    end
-
-    def to_x
-        self.unpack('H*')[0]
-    end
-
-    def from_byte
-        self.unpack("C*")[0]
     end
 end
 
@@ -46,32 +32,11 @@ class Message
         end
     end
 
-    def self.from_peer id, info
-
-        start = 0
-        inc = 4
-
-        msg = ID_LIST.index(id)
-
-        case msg
-        when :choke, :unchoke, :interested, :not_interested
-            Message.new(msg)
-
-        when :have
-            Message.new(msg, {:index => info[start, inc].from_be})
-
-        when :bitfield
-            Message.new(msg, {:bitfield => info}) #from_be??? rm
-
-        when :request, :cancel
-            Message.new(msg, {:index => info[start, inc].from_be,
-                            :begin => info[start + inc, inc].from_be,
-                            :length => info[start + (2 * inc), inc].from_be})
-        when :piece
-            Message.new(msg, {:index => info[start, inc].from_be,
-                            :begin => info[start + inc, inc].from_be})
-        else
+    def self.from_peer id
+        if ID_LIST.length < id
             return :error
+        else 
+            return ID_LIST.index(id)
         end
     end
 end
