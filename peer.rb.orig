@@ -1,6 +1,10 @@
 #require_relative 'bencode.rb'
 require 'bencode'
+<<<<<<< HEAD
+require 'thread' 
+=======
 require 'thread'
+>>>>>>> upstream/master
 
 class Peer 
     #create a peer
@@ -26,10 +30,13 @@ class Peer
         @p_choked = true
         
         @started = false #tracks whether request has been started
+<<<<<<< HEAD
+=======
         # @state[0] = am choking
         # @state[1] = am interested
         # @state[2] = peer choking
         # @state[3] = peer interested
+>>>>>>> upstream/master
     end
 
 
@@ -44,7 +51,10 @@ class Peer
         # was having some trouble with this in init, not sure why.
         # Also, putting this in initialize means that as soon as a peer object is created so is its socket
         # (so, when a tracker returns a list of 2000 peers, 2000 sockets are immediately created when the client is only likely to ever interact with less than 5% of that).
+<<<<<<< HEAD
+=======
 
+>>>>>>> upstream/master
         @sock.send "\023"+"BitTorrent protocol"+"\0\0\0\0\0\0\0\0",0
         @sock.send (info_hash + $my_id),0
 
@@ -72,6 +82,33 @@ class Peer
 
     def handle_messages msg
 
+<<<<<<< HEAD
+        print "Message from #{self} \tof type: "
+
+        case Message::ID_LIST[msg.id]
+
+        when :choke
+            puts "choke"
+            @p_choked = 1
+
+        when :unchoke
+            puts "unchoke"
+            @p_choked = 0
+
+        when :interested
+            puts "interested"
+            @p_interested = 1
+
+        when :not_interested
+            puts "uninterested"
+            @p_interested = 0
+
+        when :have
+            puts "have piece at index: #{msg.params[:index]}" 
+            #update piece rarity bitfield
+
+        when :bitfield
+=======
         case Message::ID_LIST[msg.id]
         when :choke
 
@@ -104,33 +141,53 @@ class Peer
             #update piece rarity bitfield
         when :bitfield
  
+>>>>>>> upstream/master
             bitfield = msg.params[:bitfield]
             puts "bitfield (#{bitfield.length}):\n#{bitfield.to_x}"
             #puts "Our bitfield (#{torrent.bitfield.length}):\t\n#{torrent.bitfield.to_x)}"
             #puts "with #{ torrent.decoded_data["info"]["piece length"]} bytes / piece"
+<<<<<<< HEAD
+
+        when :request
+            puts "requesting piece at #{msg.params[:index]}"
+
+        when :piece
+            puts "data block at #{msg.params[:index]}"
+
+=======
         when :request
            puts "requesting piece at #{msg.params[:index]}"
 
         when :piece
             puts "data block at #{msg.params[:index]}"
+>>>>>>> upstream/master
         when :cancel
             puts "cancelling piece at #{msg.params[:index]}" 
         else
             puts "Error: unexpected message."
+<<<<<<< HEAD
+            end 
+=======
         end 
 
+>>>>>>> upstream/master
     end
 
     #gets the block, deletes block from list of desired blocks, notifies that block has
     #been received
 
     def handle_blocks
+<<<<<<< HEAD
+        puts "insert code here"
+=======
 
+>>>>>>> upstream/master
     end
 
     def request_piece n, ln
 
         @started = true
+<<<<<<< HEAD
 
         #so when a peer sends over its bitfield, we'll let them know that we're interested
         #we'll make request for bloks
@@ -151,6 +208,91 @@ class Peer
 
         #thread that handles receiving blocks//msgs in terms of bits
 
+=======
+
+        #so when a peer sends over its bitfield, we'll let them know that we're interested
+        #we'll make request for bloks
+
+        #if the peer doesn't have the desired pieces, we'll just chill
+
+        #thread that handles getting blocks/msgs in terms of bits
+>>>>>>> upstream/master
+        Thread.new do
+            begin
+                while @started
+                    get_blocks_and_msgs
+                end
+<<<<<<< HEAD
+            rescue IOError  
+                @running = false
+                #again, more error handling?
+            end
+        end 
+    
+    end
+
+    #(threaded/blocking) gets bits that will either be blocks or messages from the queue
+    def get_blocks_and_msgs
+        data = @data_to_send.deq
+        case data
+        when Block
+            send_data data.to_peer
+        when Message
+            #    ID_LIST = [:choke, :unchoke, :interested, :not_interested, :have, :bitfield, :request, :piece, :cancel]
+
+           msg = Message.new(:piece, {:block => data, :index => data.begin, :begin => data.begin}).to_peer 
+           send_data data.to_peer
+        else
+            puts "Invalid data: #{data}."
+        end
+
+    end
+
+    #(threaded/blocking) sends bits that will either be blocks or messages
+    def send_blocks_and_msgs
+        data = convert_to_block_or_msg
+
+        case data
+        when Message
+            handle_messages data
+        when Block
+            handle_blocks data
+        else
+            puts "Invalid data: #{data}."
+        end
+    end
+
+    #converts bits that will either be blocks or messages
+    def convert_to_block_or_msg
+
+        #first, see if there's a keep alive message
+        length = -1
+        #convert data received from 32-bit be format
+        while(0 == (length = receive_data(4).from_be))
+            puts "Got keep alive message." #rm
+        end
+
+        #get message id
+        id = receive_data(1).from_byte
+
+        #if the id tells you to get a piece, you want to get the  next block that's specified
+        if :piece == Message::ID_LIST[id] 
+            length -= 9 #must subtract the message length prefix for a piece
+            msg = Message.from_peer(id, receive_data(8))
+            block = Block.new(msg.index, msg.begin, length)
+
+            until length <= 0
+                block.data += receive_data([len, BUFFER].min)
+                length -= [len, BUFFER].min
+=======
+            rescue IOError
+                @running = false
+                #more error handling? when getting the blocks fails
+            end
+        end
+
+        #thread that handles receiving blocks//msgs in terms of bits
+
         Thread.new do
             begin
                 while @started
@@ -159,12 +301,34 @@ class Peer
             rescue IOError  
                 @running = false
                 #again, more error handling?
+>>>>>>> upstream/master
             end
         else
         #otherwise you just want to add whatever message you get to the queue
             msg = Message.from_peer(id, receive_data(length))
         end
 
+    end
+        
+    
+    def send_data data
+        if data
+            @sock.send(data, 0)
+        end
+
+<<<<<<< HEAD
+    def receive_data length
+        all_data = ""
+
+        while all_data.length < length
+            data_to_store = @sock.recv(length-all_data.length)
+            all_data += data_to_store
+        end
+        #rm error handling if data_to_store is empty
+        all_data
+    end
+
+=======
         #
         # sleep 4
         # puts "Sending request"
@@ -254,5 +418,6 @@ class Peer
         #rm error handling if data_to_store is empty
         all_data
     end
+>>>>>>> upstream/master
 end
 
